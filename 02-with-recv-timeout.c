@@ -42,6 +42,17 @@ int main() {
         return 1;
     }
 
+    // Set timeout for recieves... this will mean recv can only block for the
+    // given seconds before unblocking.
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("setsockopt failed");
+        close(sock);
+        return 1;
+    }
+
     // Connect the socket to the address we created earlier.
     if (connect(sock, (struct sockaddr *)addr, sizeof(*addr)) < 0) {
         perror("connect failed");
@@ -58,14 +69,16 @@ int main() {
         return 1;
     }
 
-    // Receive response from server
-    char buffer[1024];
-    const ssize_t bytes_received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-    if (bytes_received >= 0) {
-        buffer[bytes_received] = '\0';
-        printf("Server response: %s\n", buffer);
-    } else {
-        perror("recv failed");
+    for (int i = 0; i < 10; i++) {
+        // Receive response from server
+        char buffer[1024];
+        const ssize_t bytes_received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_received > 0) {
+            buffer[bytes_received] = '\0';
+            printf("Server response: %s\n", buffer);
+        } else {
+            perror("recv failed");
+        }
     }
 
     // Close socket
